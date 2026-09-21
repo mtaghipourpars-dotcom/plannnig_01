@@ -1,6 +1,6 @@
 {
-  "name": "MAPNA PARS Dynamic Production Planning",
-  "description": "MAPNA Generator Engineering & Manufacturing (PARS) dynamic production planning, resource allocation, and scenario simulation platform.",
+  "name": "MAPNA Generator Production Planning & Execution Control Tower",
+  "description": "Real-time production planning, execution control tower, resource utilization, and risk governance for MAPNA Generator Engineering & Manufacturing Co. (PARS).",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

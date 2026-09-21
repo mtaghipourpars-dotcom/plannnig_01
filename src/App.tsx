@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
 import {
-  LayoutDashboard,
-  Layers,
-  GitBranch,
-  Zap,
-  ShieldCheck,
   CheckCircle2,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   initialPlanVersion,
@@ -20,6 +16,16 @@ import {
   sampleDecisions,
 } from './data/mockData';
 import {
+  initialProducts,
+  initialFamilyStats,
+  initialCriticalAlerts,
+  initialWorkCenterUtilization,
+  initialMaterialUtilization,
+  initialCapacityPlan,
+  initialUpcomingRisks,
+  initialLessonsLearned,
+} from './data/controlTowerData';
+import {
   PlanVersion,
   Commitment,
   ProductionOrder,
@@ -29,22 +35,29 @@ import {
   SapIntegrationState,
   Scenario,
   DecisionRecord,
+  ProductItem,
+  CriticalAlert,
+  LessonLearnedItem,
 } from './types';
 import { advancePlanningDay } from './engine/planningEngine';
-import { translations, Language } from './data/i18n';
-import { Header } from './components/Header';
-import { ExecutiveControlTower } from './components/ExecutiveControlTower';
+import { Sidebar, NavigationTab } from './components/Sidebar';
+import { TopHeader } from './components/TopHeader';
+import { ExecutiveDashboard } from './components/ExecutiveDashboard';
+import { ProductPortfolioView } from './components/ProductPortfolioView';
 import { PlanningWorkspace } from './components/PlanningWorkspace';
 import { ScenarioLab } from './components/ScenarioLab';
 import { ResourceBoard } from './components/ResourceBoard';
 import { DecisionWorkbench } from './components/DecisionWorkbench';
+import { LessonLearnedView } from './components/LessonLearnedView';
+import { ReportsAnalyticsView } from './components/ReportsAnalyticsView';
+import { AdminModal } from './components/AdminModal';
 
 export function App() {
-  const [language, setLanguage] = useState<Language>('en');
-  const [activeTab, setActiveTab] = useState<
-    'tower' | 'planning' | 'scenarios' | 'resources' | 'decisions'
-  >('tower');
+  const [activeTab, setActiveTab] = useState<NavigationTab>('home');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [adminModalTab, setAdminModalTab] = useState<NavigationTab | null>(null);
 
+  // Operational State
   const [plan, setPlan] = useState<PlanVersion>(initialPlanVersion);
   const [commitments, setCommitments] = useState<Commitment[]>(initialCommitments);
   const [orders, setOrders] = useState<ProductionOrder[]>(initialProductionOrders);
@@ -54,9 +67,14 @@ export function App() {
   const [sapState, setSapState] = useState<SapIntegrationState>(initialSapState);
   const [scenarios, setScenarios] = useState<Scenario[]>(sampleScenarios);
   const [decisions, setDecisions] = useState<DecisionRecord[]>(sampleDecisions);
-  const [toast, setToast] = useState<string | null>(null);
 
-  const t = translations[language];
+  // Control Tower Specific State
+  const [products, setProducts] = useState<ProductItem[]>(initialProducts);
+  const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
+  const [alerts, setAlerts] = useState<CriticalAlert[]>(initialCriticalAlerts);
+  const [lessons, setLessons] = useState<LessonLearnedItem[]>(initialLessonsLearned);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -65,7 +83,7 @@ export function App() {
     }, 4500);
   };
 
-  // Day Close handler: Advances planning quantum by 1 day and converts historical operations to immutable facts
+  // Execute Day-Close: Advances planning day
   const handleDayClose = () => {
     const { updatedPlan, updatedOrders, updatedCommitments } = advancePlanningDay(
       plan,
@@ -75,16 +93,43 @@ export function App() {
     setPlan(updatedPlan);
     setOrders(updatedOrders);
     setCommitments(updatedCommitments);
-    showToast(t.dayCloseSuccess);
+    showToast(`Day-Close executed successfully for ${plan.effectiveDay}. Past facts locked.`);
+  };
+
+  const handleSelectTab = (tab: NavigationTab) => {
+    if (tab === 'master-data' || tab === 'settings' || tab === 'users') {
+      setAdminModalTab(tab);
+    } else {
+      setActiveTab(tab);
+    }
+  };
+
+  const handleSelectProduct = (product: ProductItem | null) => {
+    setSelectedProduct(product);
+    if (product) {
+      setActiveTab('portfolio');
+    }
+  };
+
+  const handleSelectAlert = (alert: CriticalAlert) => {
+    if (alert.relatedEntityId?.startsWith('PRD-')) {
+      const p = products.find((x) => x.id === alert.relatedEntityId);
+      if (p) {
+        setSelectedProduct(p);
+        setActiveTab('portfolio');
+        return;
+      }
+    }
+    if (alert.relatedEntityId === 'LL-001') {
+      setActiveTab('lessons');
+      return;
+    }
+    setActiveTab('scenarios');
   };
 
   const handleAddScenario = (newScenario: Scenario) => {
     setScenarios([newScenario, ...scenarios]);
-    showToast(
-      language === 'en'
-        ? `Scenario "${newScenario.name}" simulated successfully.`
-        : `سناریوی "${newScenario.name}" با موفقیت شبیه‌سازی شد.`
-    );
+    showToast(`Scenario "${newScenario.name}" simulated successfully.`);
   };
 
   const handlePromoteToDecision = (scenario: Scenario) => {
@@ -108,11 +153,7 @@ export function App() {
 
     setDecisions([newDecision, ...decisions]);
     setActiveTab('decisions');
-    showToast(
-      language === 'en'
-        ? `Scenario promoted to Decision Workbench for executive review.`
-        : `سناریو به میز تصمیم‌گیری مدیریتی ارسال شد.`
-    );
+    showToast('Scenario promoted to Decision Workbench for executive review.');
   };
 
   const handleApproveDecision = (decisionId: string) => {
@@ -128,11 +169,7 @@ export function App() {
           : d
       )
     );
-    showToast(
-      language === 'en'
-        ? 'Decision endorsed & approved. Ready for SAP S/4HANA release.'
-        : 'مصوبه تایید شد. آماده ارسال به SAP S/4HANA.'
-    );
+    showToast('Decision endorsed & approved. Ready for SAP S/4HANA release.');
   };
 
   const handleWriteBackToSap = (decisionId: string, outboxPayload: any) => {
@@ -154,147 +191,244 @@ export function App() {
       lastReplicationTimestamp: new Date().toISOString(),
       pendingOutboxCount: 0,
     });
-    showToast(
-      language === 'en'
-        ? `Plan write-back committed to SAP S/4HANA (${txId}).`
-        : `برنامه با موفقیت در سیستم SAP S/4HANA ثبت گردید (${txId}).`
+    showToast(`Plan write-back committed to SAP S/4HANA (${txId}).`);
+  };
+
+  const handleApproveLesson = (id: string) => {
+    setLessons(
+      lessons.map((l) =>
+        l.id === id ? { ...l, status: 'APPLIED' } : l
+      )
     );
+    showToast('Lesson learned approved and promoted to best practice standard.');
   };
-
-  const handleSelectCommitment = (comm: Commitment) => {
-    setActiveTab('planning');
-  };
-
-  const navItems = [
-    { id: 'tower', label: t.navControlTower, icon: LayoutDashboard },
-    { id: 'planning', label: t.navPlanningWorkspace, icon: Layers },
-    { id: 'scenarios', label: t.navScenarioLab, icon: GitBranch },
-    { id: 'resources', label: t.navResourceBoard, icon: Zap },
-    { id: 'decisions', label: t.navDecisionWorkbench, icon: ShieldCheck },
-  ];
 
   return (
-    <div
-      dir={language === 'fa' ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-cyan-500/20 selection:text-cyan-200"
-    >
-      {/* Platform Header */}
-      <Header
-        plan={plan}
-        sapState={sapState}
-        language={language}
-        onLanguageChange={setLanguage}
-        onDayClose={handleDayClose}
+    <div className="min-h-screen bg-[#F1F5F9] text-slate-900 flex flex-col antialiased">
+      {/* Sidebar Component (Fixed on desktop, drawer on mobile) */}
+      <Sidebar
+        activeTab={activeTab}
+        onSelectTab={handleSelectTab}
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
-      {/* Primary Navigation Tabs */}
-      <nav className="border-b border-slate-800 bg-slate-900/60 sticky top-[61px] z-30 backdrop-blur-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center gap-2 overflow-x-auto py-2.5">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
+      {/* Main Content Layout with Desktop Left Padding */}
+      <div className="lg:pl-64 flex flex-col min-h-screen">
+        {/* Top Header Bar */}
+        <TopHeader
+          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+          alerts={alerts}
+          currentDate="2026-09-18"
+          onAdvanceDay={handleDayClose}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onSelectAlert={handleSelectAlert}
+        />
+
+        {/* Dynamic Main Workspace Body */}
+        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+          {/* 1. Home / Executive Dashboard (matches image.png exactly) */}
+          {activeTab === 'home' && (
+            <ExecutiveDashboard
+              products={products}
+              familyStats={initialFamilyStats}
+              alerts={alerts}
+              risks={initialUpcomingRisks}
+              workCenterUtilization={initialWorkCenterUtilization}
+              materialUtilization={initialMaterialUtilization}
+              capacityPlan={initialCapacityPlan}
+              onNavigateToTab={(tab) => handleSelectTab(tab as NavigationTab)}
+              onSelectProduct={handleSelectProduct}
+              onSelectAlert={handleSelectAlert}
+            />
+          )}
+
+          {/* 2. Product Portfolio (All 20 products with family breakdown) */}
+          {activeTab === 'portfolio' && (
+            <ProductPortfolioView
+              products={products}
+              selectedProduct={selectedProduct}
+              onSelectProduct={setSelectedProduct}
+              onBackToDashboard={() => setActiveTab('home')}
+            />
+          )}
+
+          {/* 3. Production Planning (Gantt & operations sequence) */}
+          {activeTab === 'planning' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Production Planning & Sequence Operations
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Routing schedule, past-fact locking, and daily quantum dispatch
+                  </p>
+                </div>
                 <button
-                  key={item.id}
-                  id={`nav-tab-${item.id}`}
-                  onClick={() => setActiveTab(item.id as any)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-cyan-600 text-white shadow-sm shadow-cyan-900/30'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
+                  onClick={() => setActiveTab('home')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"
                 >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
+                  ← Return to Dashboard
                 </button>
-              );
-            })}
+              </div>
+
+              <PlanningWorkspace
+                plan={plan}
+                orders={orders}
+                language="en"
+                onOpenScenarioWithOrder={(order) => {
+                  setActiveTab('scenarios');
+                }}
+              />
+            </div>
+          )}
+
+          {/* 4. Resource Management */}
+          {activeTab === 'resources' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Resource Management & Work Centers
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Capacity utilization, autoclave dwell cycles, and raw materials
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('home')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"
+                >
+                  ← Return to Dashboard
+                </button>
+              </div>
+
+              <ResourceBoard
+                workCenters={workCenters}
+                materials={materials}
+                manpower={manpower}
+                language="en"
+              />
+            </div>
+          )}
+
+          {/* 5. Risk & Scenario Analysis */}
+          {activeTab === 'scenarios' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Risk & Scenario Simulation Lab
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    What-if disruption sandbox, breakdown propagation, and opportunity cost
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('home')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"
+                >
+                  ← Return to Dashboard
+                </button>
+              </div>
+
+              <ScenarioLab
+                plan={plan}
+                scenarios={scenarios}
+                workCenters={workCenters}
+                orders={orders}
+                materials={materials}
+                language="en"
+                onAddScenario={handleAddScenario}
+                onPromoteToDecision={handlePromoteToDecision}
+              />
+            </div>
+          )}
+
+          {/* 6. Decision Governance */}
+          {activeTab === 'decisions' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Decision Governance & SAP S/4HANA Write-Back
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Formal approval audit trails, RFC transactional guarantees, and outbox state
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('home')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700"
+                >
+                  ← Return to Dashboard
+                </button>
+              </div>
+
+              <DecisionWorkbench
+                decisions={decisions}
+                scenarios={scenarios}
+                sapState={sapState}
+                language="en"
+                onApproveDecision={handleApproveDecision}
+                onWriteBackToSap={handleWriteBackToSap}
+              />
+            </div>
+          )}
+
+          {/* 7. Lesson Learned */}
+          {activeTab === 'lessons' && (
+            <LessonLearnedView
+              lessons={lessons}
+              onApproveLesson={handleApproveLesson}
+              onBackToDashboard={() => setActiveTab('home')}
+            />
+          )}
+
+          {/* 8. Reports & Analytics */}
+          {activeTab === 'reports' && (
+            <ReportsAnalyticsView
+              familyStats={initialFamilyStats}
+              onBackToDashboard={() => setActiveTab('home')}
+            />
+          )}
+        </main>
+
+        {/* Global Toast Notification */}
+        {toast && (
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 shadow-2xl text-xs font-medium">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toast}</span>
+            <button
+              onClick={() => setToast(null)}
+              className="text-slate-400 hover:text-slate-200 ml-2 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
-        </div>
-      </nav>
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
-        {activeTab === 'tower' && (
-          <ExecutiveControlTower
-            plan={plan}
-            commitments={commitments}
-            workCenters={workCenters}
-            decisions={decisions}
-            materials={materials}
-            language={language}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
-            onSelectCommitment={handleSelectCommitment}
-          />
         )}
 
-        {activeTab === 'planning' && (
-          <PlanningWorkspace
-            plan={plan}
-            orders={orders}
-            language={language}
-            onOpenScenarioWithOrder={(order) => {
-              setActiveTab('scenarios');
-            }}
-          />
-        )}
+        {/* Administration Modal */}
+        <AdminModal
+          activeAdminTab={adminModalTab}
+          onClose={() => setAdminModalTab(null)}
+        />
 
-        {activeTab === 'scenarios' && (
-          <ScenarioLab
-            plan={plan}
-            scenarios={scenarios}
-            workCenters={workCenters}
-            orders={orders}
-            materials={materials}
-            language={language}
-            onAddScenario={handleAddScenario}
-            onPromoteToDecision={handlePromoteToDecision}
-          />
-        )}
-
-        {activeTab === 'resources' && (
-          <ResourceBoard
-            workCenters={workCenters}
-            materials={materials}
-            manpower={manpower}
-            language={language}
-          />
-        )}
-
-        {activeTab === 'decisions' && (
-          <DecisionWorkbench
-            decisions={decisions}
-            scenarios={scenarios}
-            sapState={sapState}
-            language={language}
-            onApproveDecision={handleApproveDecision}
-            onWriteBackToSap={handleWriteBackToSap}
-          />
-        )}
-      </main>
-
-      {/* Notification Toast */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900 border border-cyan-800 text-slate-100 shadow-2xl animate-fade-in text-xs font-medium">
-          <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-          <span>{toast}</span>
-          <button
-            onClick={() => setToast(null)}
-            className="text-slate-400 hover:text-slate-200 ml-2"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 text-slate-500 text-2xs font-mono text-center">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>MAPNA Generator Engineering & Manufacturing (PARS) • Dynamic Planning Platform</span>
-          <span>SAP S/4HANA Integration Contract v2.1 • RFC Idempotent</span>
-        </div>
-      </footer>
+        {/* Application Footer */}
+        <footer className="border-t border-slate-200/80 bg-white py-3.5 px-6 text-slate-500 text-[11px] font-medium text-center">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>
+              MAPNA GENERATOR Engineering & Manufacturing Co. (PARS) • Production Planning & Execution Control Tower
+            </span>
+            <span className="font-mono text-slate-400">
+              System Online • v1.0.0
+            </span>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
+export default App;

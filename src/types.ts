@@ -195,3 +195,67 @@ export interface SapIntegrationState {
   quarantinedMessagesCount: number;
   activeContractVersion: string;
 }
+
+export type ProductHealth = 'HEALTHY' | 'MONITORING' | 'CRITICAL' | 'ON_HOLD';
+
+export interface ProductItem {
+  id: string;
+  code: string;
+  name: string;
+  family: 'Generators & Turbines' | 'Wind Equipment' | 'Industrial Motors' | 'Busduct & Aux.';
+  health: ProductHealth;
+  progressPercent: number;
+  plannedProgressPercent: number;
+  costConsumptionPercent: number;
+  customerCommitmentCode: string;
+  customerName: string;
+  dueDate: PlanningDay;
+  projectedDeliveryDate: PlanningDay;
+  delayDays: number;
+  bottleneck?: string;
+  targetRating: string;
+}
+
+export interface CriticalAlert {
+  id: string;
+  level: 'CRITICAL' | 'WARNING' | 'INFO';
+  title: string;
+  subtitle: string;
+  detail: string;
+  relatedEntityId?: string;
+  delayDays?: number;
+}
+
+export interface UpcomingRisk {
+  id: string;
+  dateStr: string; // e.g. "Sep 22"
+  title: string;
+  description: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  impactArea: string;
+}
+
+export interface ProductFamilyStat {
+  family: 'Generators & Turbines' | 'Wind Equipment' | 'Industrial Motors' | 'Busduct & Aux.';
+  avgProgress: number;
+  healthyCount: number;
+  monitoringCount: number;
+  criticalCount: number;
+  onHoldCount: number;
+  totalCount: number;
+  physicalProgress: number;
+  costConsumption: number;
+}
+
+export interface LessonLearnedItem {
+  id: string;
+  title: string;
+  category: string;
+  project: string;
+  efficiencyGain: string;
+  impactScore: number;
+  status: 'PENDING_REVIEW' | 'APPROVED' | 'APPLIED';
+  author: string;
+  createdAt: string;
+  description: string;
+}
