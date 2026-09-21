@@ -1,0 +1,40 @@
+{
+  "examples": [
+    {
+      "type": "MACHINE_BREAKDOWN_COMMAND",
+      "request": {
+        "effectiveDay": "2026-10-03",
+        "durationDays": 3,
+        "reasonCode": "MECH_FAILURE",
+        "confidence": "HIGH",
+        "source": "MAINTENANCE"
+      }
+    },
+    {
+      "type": "PRIORITY_CHANGE_COMMAND",
+      "request": {
+        "effectiveDay": "2026-10-04",
+        "newPriority": 1,
+        "reasonCode": "EXECUTIVE_REPRIORITIZATION"
+      }
+    },
+    {
+      "type": "SCENARIO_CREATE",
+      "request": {
+        "basePlanVersionId": "00000000-0000-0000-0000-000000000001",
+        "name": "Prioritize Product P-017",
+        "horizon": {"from": "2026-09-22", "to": "2026-12-20"},
+        "initialEvents": [
+          {
+            "type": "PRODUCTION_ORDER_PRIORITY_CHANGED",
+            "effectiveDay": "2026-09-22",
+            "targetType": "PRODUCT_PLAN",
+            "targetId": "00000000-0000-0000-0000-000000000017",
+            "payload": {"newPriority": 1}
+          }
+        ]
+      }
+    }
+  ],
+  "note": "Example identifiers are synthetic and must never be represented as live MAPNA data."
+}

@@ -1,0 +1,14 @@
+stateDiagram-v2
+  [*] --> DRAFT
+  DRAFT --> CALCULATING: calculate
+  CALCULATING --> CALCULATED: engine complete
+  CALCULATED --> STALE: base plan changed
+  STALE --> REBASING: rebase
+  REBASING --> CALCULATING: recalculate
+  CALCULATED --> OPTIMIZING: optimize
+  OPTIMIZING --> OPTIMIZED: candidates generated
+  OPTIMIZED --> APPROVAL_PENDING: submit
+  APPROVAL_PENDING --> APPROVED: approval chain passed
+  APPROVAL_PENDING --> REJECTED: rejected
+  APPROVED --> COMMITTED: commit
+  COMMITTED --> [*]

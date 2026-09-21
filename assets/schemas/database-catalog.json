@@ -1,0 +1,384 @@
+{
+  "source": "references/14-database-design.md",
+  "tableCount": 63,
+  "tables": [
+    {
+      "table": "core.organization",
+      "fields": "organization_id UUID PK; parent_id UUID FK; code VARCHAR(40) UK; name VARCHAR(200); type VARCHAR(40); status VARCHAR(20); source_system VARCHAR(30); source_id VARCHAR(80); valid_from DATE; valid_to DATE NULL; version INT",
+      "indexes": "UK(code); IX(parent_id)",
+      "relationships": "self hierarchy"
+    },
+    {
+      "table": "core.plant",
+      "fields": "plant_id UUID PK; organization_id UUID FK; code VARCHAR(20) UK; name VARCHAR(120); timezone VARCHAR(50); calendar_id UUID FK; status VARCHAR(20)",
+      "indexes": "UK(code)",
+      "relationships": "organization, calendar"
+    },
+    {
+      "table": "core.material",
+      "fields": "material_id UUID PK; material_no VARCHAR(40) UK; description VARCHAR(250); material_type VARCHAR(40); base_uom VARCHAR(10); criticality VARCHAR(10); planning_policy VARCHAR(30); source_system VARCHAR(30); source_id VARCHAR(80); version INT",
+      "indexes": "UK(material_no); IX(criticality)",
+      "relationships": "BOM, stock, demand"
+    },
+    {
+      "table": "core.product",
+      "fields": "product_id UUID PK; product_code VARCHAR(60) UK; product_family VARCHAR(60); material_id UUID FK; engineering_rev_id UUID NULL; serial_control BOOLEAN; status VARCHAR(20)",
+      "indexes": "UK(product_code); IX(product_family)",
+      "relationships": "material, revision"
+    },
+    {
+      "table": "core.customer",
+      "fields": "customer_id UUID PK; external_bp_no VARCHAR(40) UK; name VARCHAR(250); country_code VARCHAR(3); status VARCHAR(20); source_system VARCHAR(30)",
+      "indexes": "UK(external_bp_no)",
+      "relationships": "commitment"
+    },
+    {
+      "table": "core.supplier",
+      "fields": "supplier_id UUID PK; external_bp_no VARCHAR(40) UK; name VARCHAR(250); country_code VARCHAR(3); lead_time_days NUMERIC(8,2); reliability_pct NUMERIC(5,2); status VARCHAR(20)",
+      "indexes": "UK(external_bp_no)",
+      "relationships": "procurement"
+    },
+    {
+      "table": "core.calendar",
+      "fields": "calendar_id UUID PK; code VARCHAR(30) UK; timezone VARCHAR(50); workday_rule VARCHAR(30); version INT; status VARCHAR(20)",
+      "indexes": "UK(code)",
+      "relationships": "plant, day"
+    },
+    {
+      "table": "core.calendar_day",
+      "fields": "calendar_day_id UUID PK; calendar_id UUID FK; business_date DATE; is_working BOOLEAN; capacity_factor NUMERIC(6,3); shift_count INT; version INT",
+      "indexes": "UK(calendar_id,business_date)",
+      "relationships": "calendar"
+    },
+    {
+      "table": "core.shift",
+      "fields": "shift_id UUID PK; calendar_id UUID FK; code VARCHAR(20); start_time TIME; end_time TIME; capacity_hours NUMERIC(8,2); status VARCHAR(20)",
+      "indexes": "UK(calendar_id,code)",
+      "relationships": "calendar"
+    },
+    {
+      "table": "core.work_center",
+      "fields": "work_center_id UUID PK; plant_id UUID FK; code VARCHAR(40) UK; name VARCHAR(160); resource_class VARCHAR(40); bottleneck_flag BOOLEAN; default_capacity_hours NUMERIC(10,2); status VARCHAR(20); source_id VARCHAR(80)",
+      "indexes": "UK(code); IX(resource_class,bottleneck_flag)",
+      "relationships": "operations"
+    },
+    {
+      "table": "core.resource",
+      "fields": "resource_id UUID PK; resource_code VARCHAR(60) UK; resource_type VARCHAR(30); name VARCHAR(200); plant_id UUID FK NULL; status VARCHAR(20); source_system VARCHAR(30); source_id VARCHAR(80); version INT",
+      "indexes": "UK(resource_code); IX(resource_type,status); IX(plant_id,resource_type)",
+      "relationships": "generic resource aggregate; specialized resource tables"
+    },
+    {
+      "table": "core.work_center_eligibility",
+      "fields": "eligibility_id UUID PK; work_center_id UUID FK; operation_class VARCHAR(60); product_family VARCHAR(60); efficiency_factor NUMERIC(8,4); valid_from DATE; valid_to DATE NULL",
+      "indexes": "IX(work_center_id,operation_class,valid_from)",
+      "relationships": "work_center"
+    },
+    {
+      "table": "core.manpower_skill",
+      "fields": "skill_id UUID PK; skill_code VARCHAR(40) UK; name VARCHAR(160); certification_required BOOLEAN; valid_from DATE; valid_to DATE NULL",
+      "indexes": "UK(skill_code)",
+      "relationships": "manpower pool"
+    },
+    {
+      "table": "core.resource_person",
+      "fields": "person_resource_id UUID PK; external_person_id VARCHAR(60) UK; organization_id UUID FK; status VARCHAR(20)",
+      "indexes": "UK(external_person_id)",
+      "relationships": "skill mapping"
+    },
+    {
+      "table": "core.person_skill",
+      "fields": "person_skill_id UUID PK; person_resource_id UUID FK; skill_id UUID FK; proficiency NUMERIC(6,3); valid_to DATE NULL",
+      "indexes": "UK(person_resource_id,skill_id)",
+      "relationships": "skill"
+    },
+    {
+      "table": "core.bom_header",
+      "fields": "bom_id UUID PK; product_id UUID FK; revision VARCHAR(40); status VARCHAR(20); valid_from DATE; valid_to DATE NULL; source_id VARCHAR(80)",
+      "indexes": "UK(product_id,revision)",
+      "relationships": "bom item"
+    },
+    {
+      "table": "core.bom_item",
+      "fields": "bom_item_id UUID PK; bom_id UUID FK; component_material_id UUID FK; qty NUMERIC(18,6); uom VARCHAR(10); scrap_pct NUMERIC(8,4); sequence_no INT; required_before_op INT",
+      "indexes": "IX(bom_id,sequence_no)",
+      "relationships": "BOM/material"
+    },
+    {
+      "table": "core.routing",
+      "fields": "routing_id UUID PK; product_id UUID FK; revision VARCHAR(40); status VARCHAR(20); valid_from DATE; valid_to DATE NULL; source_id VARCHAR(80)",
+      "indexes": "UK(product_id,revision)",
+      "relationships": "routing ops"
+    },
+    {
+      "table": "core.routing_operation",
+      "fields": "routing_operation_id UUID PK; routing_id UUID FK; operation_no INT; description VARCHAR(200); standard_hours NUMERIC(12,3); setup_hours NUMERIC(12,3); queue_days NUMERIC(8,3); work_center_id UUID FK; skill_id UUID NULL; sequence_group VARCHAR(30)",
+      "indexes": "UK(routing_id,operation_no); IX(work_center_id)",
+      "relationships": "routing/workcenter"
+    },
+    {
+      "table": "core.engineering_revision",
+      "fields": "engineering_rev_id UUID PK; product_id UUID FK; revision_code VARCHAR(40); status VARCHAR(20); effective_from DATE; effective_to DATE NULL; document_uri VARCHAR(1000)",
+      "indexes": "UK(product_id,revision_code)",
+      "relationships": "product"
+    },
+    {
+      "table": "core.commitment",
+      "fields": "commitment_id UUID PK; external_id VARCHAR(80) UK; customer_id UUID FK; product_id UUID FK; qty NUMERIC(18,6); due_date DATE; priority INT; commitment_class VARCHAR(40); commercial_value NUMERIC(20,2); penalty_value NUMERIC(20,2) NULL; status VARCHAR(30)",
+      "indexes": "UK(external_id); IX(due_date,status); IX(priority)",
+      "relationships": "product/customer"
+    },
+    {
+      "table": "core.commitment_milestone",
+      "fields": "milestone_id UUID PK; commitment_id UUID FK; milestone_type VARCHAR(40); planned_date DATE; actual_date DATE NULL; status VARCHAR(20)",
+      "indexes": "IX(commitment_id,milestone_type)",
+      "relationships": "commitment"
+    },
+    {
+      "table": "core.production_order_ref",
+      "fields": "production_order_id UUID PK; sap_order_no VARCHAR(40) UK; product_id UUID FK; plant_id UUID FK; qty NUMERIC(18,6); basic_start DATE; basic_finish DATE; system_status VARCHAR(60); source_version VARCHAR(40)",
+      "indexes": "UK(sap_order_no); IX(product_id,basic_finish)",
+      "relationships": "operation, commitment mapping"
+    },
+    {
+      "table": "core.production_operation_ref",
+      "fields": "operation_id UUID PK; production_order_id UUID FK; operation_no INT; work_center_id UUID FK; planned_hours NUMERIC(12,3); confirmed_hours NUMERIC(12,3); status VARCHAR(30); planned_start DATE; planned_finish DATE; confirmation_qty NUMERIC(18,6)",
+      "indexes": "UK(production_order_id,operation_no); IX(work_center_id,planned_start)",
+      "relationships": "order/workcenter"
+    },
+    {
+      "table": "core.inventory_snapshot",
+      "fields": "inventory_snapshot_id UUID PK; material_id UUID FK; plant_id UUID FK; storage_loc VARCHAR(20); snapshot_date DATE; unrestricted_qty NUMERIC(20,6); quality_qty NUMERIC(20,6); blocked_qty NUMERIC(20,6); reserved_qty NUMERIC(20,6)",
+      "indexes": "IX(material_id,snapshot_date); IX(plant_id,snapshot_date)",
+      "relationships": "material/plant"
+    },
+    {
+      "table": "core.supply_receipt",
+      "fields": "receipt_id UUID PK; material_id UUID FK; supplier_id UUID FK; source_doc_type VARCHAR(30); source_doc_no VARCHAR(80); expected_date DATE; qty NUMERIC(20,6); confirmed_date DATE NULL; status VARCHAR(20)",
+      "indexes": "IX(material_id,expected_date); UK(source_doc_type,source_doc_no)",
+      "relationships": "material/supplier"
+    },
+    {
+      "table": "core.cash_bucket",
+      "fields": "cash_bucket_id UUID PK; business_date DATE; currency VARCHAR(3); available_amount NUMERIC(22,2); reserved_amount NUMERIC(22,2); confidence VARCHAR(10); source_system VARCHAR(30)",
+      "indexes": "UK(business_date,currency); IX(business_date)",
+      "relationships": "finance planning"
+    },
+    {
+      "table": "planning.planning_day",
+      "fields": "planning_day_id UUID PK; business_date DATE UK; status VARCHAR(20); actual_cutoff_ts TIMESTAMPTZ; plan_version_id UUID NULL; state_hash VARCHAR(128); closed_at TIMESTAMPTZ NULL",
+      "indexes": "UK(business_date); IX(status,business_date)",
+      "relationships": "plan version"
+    },
+    {
+      "table": "planning.plan_version",
+      "fields": "plan_version_id UUID PK; plan_no VARCHAR(50) UK; planning_day_id UUID FK; base_version_id UUID NULL; version_no INT; status VARCHAR(20); rules_version VARCHAR(40); model_version VARCHAR(40); created_by VARCHAR(80); created_at TIMESTAMPTZ; state_hash VARCHAR(128)",
+      "indexes": "UK(plan_no); IX(planning_day_id,status)",
+      "relationships": "planning day/scenario"
+    },
+    {
+      "table": "planning.product_plan",
+      "fields": "product_plan_id UUID PK; plan_version_id UUID FK; product_id UUID FK; commitment_id UUID NULL; planned_start DATE; planned_finish DATE; planned_qty NUMERIC(18,6); progress_pct NUMERIC(7,3); risk_status VARCHAR(20)",
+      "indexes": "IX(plan_version_id,risk_status); IX(product_id,planned_finish)",
+      "relationships": "product/commitment"
+    },
+    {
+      "table": "planning.order_plan",
+      "fields": "order_plan_id UUID PK; plan_version_id UUID FK; production_order_id UUID FK; planned_start DATE; planned_finish DATE; priority INT; allocation_status VARCHAR(20); schedule_confidence VARCHAR(10)",
+      "indexes": "UK(plan_version_id,production_order_id); IX(plan_version_id,planned_finish); IX(production_order_id,plan_version_id)",
+      "relationships": "order plan"
+    },
+    {
+      "table": "planning.operation_plan",
+      "fields": "operation_plan_id UUID PK; plan_version_id UUID FK; operation_id UUID FK; work_center_id UUID FK; planned_start DATE; planned_finish DATE; planned_hours NUMERIC(12,3); allocated_hours NUMERIC(12,3); status VARCHAR(20)",
+      "indexes": "IX(plan_version_id,work_center_id,planned_start); UK(plan_version_id,operation_id)",
+      "relationships": "order/resource"
+    },
+    {
+      "table": "planning.order_material_demand",
+      "fields": "demand_id UUID PK; plan_version_id UUID FK; order_plan_id UUID FK; material_id UUID FK; business_date DATE; required_qty NUMERIC(20,6); allocated_qty NUMERIC(20,6); shortage_qty NUMERIC(20,6); confidence VARCHAR(10)",
+      "indexes": "IX(plan_version_id,material_id,business_date); IX(order_plan_id,business_date)",
+      "relationships": "order/material/plan"
+    },
+    {
+      "table": "planning.resource_allocation",
+      "fields": "allocation_id UUID PK; plan_version_id UUID FK; resource_type VARCHAR(30); resource_id UUID; business_date DATE; demand_value NUMERIC(20,6); capacity_value NUMERIC(20,6); allocated_value NUMERIC(20,6); utilization_pct NUMERIC(8,3); confidence VARCHAR(10)",
+      "indexes": "IX(plan_version_id,resource_type,resource_id,business_date)",
+      "relationships": "plan/resource"
+    },
+    {
+      "table": "planning.material_forecast",
+      "fields": "material_forecast_id UUID PK; plan_version_id UUID FK; material_id UUID FK; business_date DATE; opening_qty NUMERIC(20,6); receipts_qty NUMERIC(20,6); demand_qty NUMERIC(20,6); projected_balance NUMERIC(20,6); shortage_flag BOOLEAN; first_shortage_day DATE NULL",
+      "indexes": "IX(plan_version_id,material_id,business_date); IX(shortage_flag,first_shortage_day)",
+      "relationships": "material/plan"
+    },
+    {
+      "table": "planning.commitment_forecast",
+      "fields": "commitment_forecast_id UUID PK; plan_version_id UUID FK; commitment_id UUID FK; forecast_date DATE; delay_days INT; on_time BOOLEAN; risk_status VARCHAR(20); root_cause_code VARCHAR(60)",
+      "indexes": "IX(plan_version_id,risk_status); IX(commitment_id,forecast_date)",
+      "relationships": "commitment/plan"
+    },
+    {
+      "table": "planning.risk_case",
+      "fields": "risk_case_id UUID PK; case_no VARCHAR(50) UK; plan_version_id UUID FK; entity_type VARCHAR(40); entity_id UUID; severity VARCHAR(20); status VARCHAR(20); root_cause_code VARCHAR(60); first_detected_day DATE; expected_impact_days INT",
+      "indexes": "UK(case_no); IX(status,severity); IX(entity_type,entity_id)",
+      "relationships": "plan/decision"
+    },
+    {
+      "table": "scenario.scenario",
+      "fields": "scenario_id UUID PK; scenario_no VARCHAR(50) UK; base_plan_version_id UUID FK; name VARCHAR(200); status VARCHAR(30); owner VARCHAR(80); rules_version VARCHAR(40); model_version VARCHAR(40); created_at TIMESTAMPTZ; calculated_at TIMESTAMPTZ NULL; state_hash VARCHAR(128)",
+      "indexes": "UK(scenario_no); IX(base_plan_version_id,status)",
+      "relationships": "scenario events/results"
+    },
+    {
+      "table": "scenario.scenario_event",
+      "fields": "scenario_event_id UUID PK; scenario_id UUID FK; event_type VARCHAR(50); effective_day DATE; target_type VARCHAR(40); target_id UUID; payload JSONB; expected_version INT NULL; confidence VARCHAR(10); created_by VARCHAR(80); created_at TIMESTAMPTZ",
+      "indexes": "IX(scenario_id,effective_day); IX(target_type,target_id)",
+      "relationships": "scenario"
+    },
+    {
+      "table": "scenario.resource_requirement",
+      "fields": "requirement_id UUID PK; scenario_id UUID FK; resource_type VARCHAR(30); resource_id UUID NULL; business_date DATE; required_value NUMERIC(20,6); available_value NUMERIC(20,6); gap_value NUMERIC(20,6); injection_type VARCHAR(40); confidence VARCHAR(10)",
+      "indexes": "IX(scenario_id,resource_type,business_date); IX(gap_value)",
+      "relationships": "scenario/resource"
+    },
+    {
+      "table": "scenario.scenario_impact",
+      "fields": "impact_id UUID PK; scenario_id UUID FK; entity_type VARCHAR(40); entity_id UUID; baseline_value NUMERIC(22,6) NULL; scenario_value NUMERIC(22,6) NULL; delta_value NUMERIC(22,6) NULL; delta_days INT NULL; impact_type VARCHAR(40)",
+      "indexes": "IX(scenario_id,entity_type,entity_id)",
+      "relationships": "scenario"
+    },
+    {
+      "table": "scenario.operation_plan",
+      "fields": "scenario_operation_plan_id UUID PK; scenario_id UUID FK; operation_id UUID FK; business_date DATE; work_center_id UUID FK; planned_start DATE; planned_finish DATE; planned_hours NUMERIC(12,3); allocated_hours NUMERIC(12,3); status VARCHAR(20)",
+      "indexes": "IX(scenario_id,business_date,work_center_id); UK(scenario_id,operation_id)",
+      "relationships": "scenario/order/resource"
+    },
+    {
+      "table": "scenario.material_forecast",
+      "fields": "scenario_material_forecast_id UUID PK; scenario_id UUID FK; material_id UUID FK; business_date DATE; opening_qty NUMERIC(20,6); receipts_qty NUMERIC(20,6); demand_qty NUMERIC(20,6); projected_balance NUMERIC(20,6); shortage_qty NUMERIC(20,6); first_shortage_flag BOOLEAN",
+      "indexes": "IX(scenario_id,material_id,business_date); IX(scenario_id,first_shortage_flag,business_date)",
+      "relationships": "scenario/material"
+    },
+    {
+      "table": "scenario.commitment_forecast",
+      "fields": "scenario_commitment_forecast_id UUID PK; scenario_id UUID FK; commitment_id UUID FK; forecast_date DATE; delay_days INT; on_time BOOLEAN; risk_status VARCHAR(20); root_cause_code VARCHAR(60)",
+      "indexes": "IX(scenario_id,risk_status); IX(commitment_id,forecast_date)",
+      "relationships": "scenario/commitment"
+    },
+    {
+      "table": "scenario.optimization_run",
+      "fields": "optimization_run_id UUID PK; scenario_id UUID FK; objective_profile_code VARCHAR(50); solver VARCHAR(50); status VARCHAR(30); started_at TIMESTAMPTZ; completed_at TIMESTAMPTZ; objective_value NUMERIC(24,8) NULL; solver_gap NUMERIC(12,8) NULL; seed BIGINT NULL",
+      "indexes": "IX(scenario_id,started_at)",
+      "relationships": "scenario"
+    },
+    {
+      "table": "decision.alternative",
+      "fields": "alternative_id UUID PK; scenario_id UUID FK; alternative_no VARCHAR(30); rank_no INT NULL; feasibility_status VARCHAR(20); objective_value NUMERIC(24,8) NULL; resource_injection NUMERIC(24,2) NULL; opportunity_cost NUMERIC(24,2) NULL; payload JSONB",
+      "indexes": "UK(scenario_id,alternative_no); IX(scenario_id,feasibility_status)",
+      "relationships": "scenario"
+    },
+    {
+      "table": "decision.decision",
+      "fields": "decision_id UUID PK; decision_no VARCHAR(50) UK; case_id UUID FK; selected_alternative_id UUID FK; status VARCHAR(20); decision_scope VARCHAR(40); approved_by VARCHAR(80); approved_at TIMESTAMPTZ NULL; expected_review_date DATE NULL; rationale TEXT",
+      "indexes": "UK(decision_no); IX(status,approved_at)",
+      "relationships": "alternative/risk"
+    },
+    {
+      "table": "decision.approval",
+      "fields": "approval_id UUID PK; decision_id UUID FK; approver VARCHAR(80); role_code VARCHAR(50); action VARCHAR(20); comment TEXT; acted_at TIMESTAMPTZ",
+      "indexes": "IX(decision_id,acted_at)",
+      "relationships": "decision"
+    },
+    {
+      "table": "execution.actual_event",
+      "fields": "actual_event_id UUID PK; event_type VARCHAR(50); planning_day_id UUID FK; entity_type VARCHAR(40); entity_id UUID; event_time TIMESTAMPTZ; quantity NUMERIC(20,6) NULL; hours NUMERIC(16,3) NULL; amount NUMERIC(24,2) NULL; payload JSONB; source_system VARCHAR(30); source_id VARCHAR(80); immutable_hash VARCHAR(128)",
+      "indexes": "IX(planning_day_id,event_type); IX(entity_type,entity_id,event_time); UK(source_system,source_id,event_type)",
+      "relationships": "execution"
+    },
+    {
+      "table": "execution.reconciliation",
+      "fields": "reconciliation_id UUID PK; planning_day_id UUID FK; object_type VARCHAR(40); object_id UUID; planned_value NUMERIC(22,6); actual_value NUMERIC(22,6); variance_value NUMERIC(22,6); status VARCHAR(20); reason_code VARCHAR(60); created_at TIMESTAMPTZ",
+      "indexes": "IX(planning_day_id,status); IX(object_type,object_id)",
+      "relationships": "planning/execution"
+    },
+    {
+      "table": "execution.quality_hold",
+      "fields": "quality_hold_id UUID PK; entity_type VARCHAR(40); entity_id UUID; reason_code VARCHAR(60); created_on DATE; released_on DATE NULL; status VARCHAR(20); authority VARCHAR(80); notes TEXT",
+      "indexes": "IX(entity_type,entity_id,status)",
+      "relationships": "execution"
+    },
+    {
+      "table": "learning.lesson",
+      "fields": "lesson_id UUID PK; lesson_no VARCHAR(50) UK; root_cause_code VARCHAR(60); title VARCHAR(250); description TEXT; confidence VARCHAR(10); status VARCHAR(20); created_by VARCHAR(80); created_at TIMESTAMPTZ",
+      "indexes": "UK(lesson_no); IX(root_cause_code,status)",
+      "relationships": "learning"
+    },
+    {
+      "table": "learning.lesson_evidence",
+      "fields": "lesson_evidence_id UUID PK; lesson_id UUID FK; source_type VARCHAR(40); source_id UUID; metric_code VARCHAR(60); predicted_value NUMERIC(22,6) NULL; actual_value NUMERIC(22,6) NULL; variance_value NUMERIC(22,6) NULL; notes TEXT",
+      "indexes": "IX(lesson_id,metric_code)",
+      "relationships": "lesson"
+    },
+    {
+      "table": "learning.lesson_rule",
+      "fields": "lesson_rule_id UUID PK; lesson_id UUID FK; parameter_code VARCHAR(80); old_value NUMERIC(22,8) NULL; new_value NUMERIC(22,8) NULL; effective_from DATE; effective_to DATE NULL; approval_status VARCHAR(20)",
+      "indexes": "IX(parameter_code,effective_from)",
+      "relationships": "lesson/config"
+    },
+    {
+      "table": "integration.inbox_message",
+      "fields": "message_id UUID PK; external_message_id VARCHAR(120); source_system VARCHAR(40); message_type VARCHAR(80); received_at TIMESTAMPTZ; payload JSONB; status VARCHAR(20); retry_count INT; last_error TEXT NULL; processed_at TIMESTAMPTZ NULL",
+      "indexes": "UK(source_system,external_message_id,message_type); IX(status,received_at)",
+      "relationships": "integration"
+    },
+    {
+      "table": "integration.outbox_event",
+      "fields": "outbox_id UUID PK; aggregate_type VARCHAR(50); aggregate_id UUID; event_type VARCHAR(80); payload JSONB; created_at TIMESTAMPTZ; published_at TIMESTAMPTZ NULL; status VARCHAR(20); retry_count INT",
+      "indexes": "IX(status,created_at); IX(aggregate_type,aggregate_id)",
+      "relationships": "integration"
+    },
+    {
+      "table": "integration.message_mapping",
+      "fields": "mapping_id UUID PK; source_system VARCHAR(40); source_object VARCHAR(80); source_key VARCHAR(120); target_type VARCHAR(80); target_id UUID; mapping_status VARCHAR(20); last_seen_at TIMESTAMPTZ",
+      "indexes": "UK(source_system,source_object,source_key); IX(target_type,target_id)",
+      "relationships": "integration"
+    },
+    {
+      "table": "audit.audit_event",
+      "fields": "audit_event_id UUID PK; event_time TIMESTAMPTZ; actor_id VARCHAR(100); action VARCHAR(80); object_type VARCHAR(60); object_id VARCHAR(100); before_hash VARCHAR(128) NULL; after_hash VARCHAR(128) NULL; correlation_id VARCHAR(100); ip_addr INET NULL; details JSONB",
+      "indexes": "IX(event_time); IX(object_type,object_id); IX(actor_id,event_time)",
+      "relationships": "audit"
+    },
+    {
+      "table": "config.rule_set",
+      "fields": "rule_set_id UUID PK; code VARCHAR(60) UK; version_no INT; status VARCHAR(20); effective_from DATE; effective_to DATE NULL; payload JSONB; approved_by VARCHAR(80) NULL",
+      "indexes": "UK(code,version_no); IX(code,effective_from)",
+      "relationships": "configuration"
+    },
+    {
+      "table": "config.threshold",
+      "fields": "threshold_id UUID PK; code VARCHAR(80) UK; value_numeric NUMERIC(24,8) NULL; value_text VARCHAR(250) NULL; effective_from DATE; effective_to DATE NULL; scope_json JSONB",
+      "indexes": "UK(code,effective_from)",
+      "relationships": "configuration"
+    },
+    {
+      "table": "readmodel.executive_snapshot",
+      "fields": "snapshot_id UUID PK; business_date DATE; generated_at TIMESTAMPTZ; plan_version_id UUID; total_commitments INT; at_risk INT; resource_crises INT; material_shortages INT; decisions_pending INT; payload JSONB",
+      "indexes": "UK(business_date,plan_version_id)",
+      "relationships": "read model"
+    },
+    {
+      "table": "readmodel.resource_heatmap",
+      "fields": "heatmap_id UUID PK; plan_version_id UUID; resource_type VARCHAR(30); resource_id UUID; business_date DATE; utilization_pct NUMERIC(8,3); demand_value NUMERIC(20,6); capacity_value NUMERIC(20,6); status VARCHAR(20)",
+      "indexes": "IX(plan_version_id,resource_type,business_date)",
+      "relationships": "read model"
+    },
+    {
+      "table": "readmodel.product_timeline",
+      "fields": "timeline_id UUID PK; plan_version_id UUID; product_id UUID; business_date DATE; planned_progress NUMERIC(8,3); actual_progress NUMERIC(8,3) NULL; status VARCHAR(20); risk_status VARCHAR(20)",
+      "indexes": "IX(plan_version_id,product_id,business_date)",
+      "relationships": "read model"
+    }
+  ]
+}

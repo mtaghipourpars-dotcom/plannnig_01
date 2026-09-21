@@ -1,0 +1,18 @@
+stateDiagram-v2
+  [*] --> OPEN
+  OPEN --> FROZEN: actual cutoff reached
+  FROZEN --> CLOSED: day-close completed
+  CLOSED --> [*]
+
+  CLOSED --> CORRECTION: compensating actual event
+  CORRECTION --> CLOSED: revalidated
+
+  note right of OPEN
+    Future planning events allowed.
+    Actual events may be ingested.
+  end note
+
+  note right of CLOSED
+    Past facts are immutable.
+    Corrections are new events.
+  end note

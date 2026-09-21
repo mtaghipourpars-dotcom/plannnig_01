@@ -1,0 +1,103 @@
+version: 1.0.0
+envelope:
+  eventId: uuid
+  eventType: string
+  occurredAt: RFC3339
+  effectivePlanningDay: date
+  sourceSystem: string
+  correlationId: string
+  causationId: string|null
+  aggregateType: string
+  aggregateId: uuid|string
+  schemaVersion: string
+  confidence: HIGH|MEDIUM|LOW|null
+  payload: object
+events:
+- type: PRODUCTION_ORDER_CREATED
+  timeClass: Future
+  target: production_order
+  effect: Creates future workload.
+- type: PRODUCTION_ORDER_PRIORITY_CHANGED
+  timeClass: Future
+  target: production_order
+  effect: Changes competition priority from effective day.
+- type: MACHINE_BREAKDOWN
+  timeClass: Future/Actual trigger
+  target: work_center
+  effect: Removes capacity from effective day.
+- type: MACHINE_REPAIRED
+  timeClass: Future
+  target: work_center
+  effect: Restores capacity from effective day.
+- type: MATERIAL_RECEIPT_CONFIRMED
+  timeClass: Future/Actual
+  target: material
+  effect: Adds supply to daily stock projection.
+- type: MATERIAL_RECEIPT_DELAYED
+  timeClass: Future
+  target: material receipt
+  effect: Shifts supply date.
+- type: MATERIAL_SHORTAGE_DETECTED
+  timeClass: Derived
+  target: material
+  effect: Raised by forecast engine.
+- type: CASH_INJECTED
+  timeClass: Future
+  target: cash bucket
+  effect: Adds future available cash.
+- type: QUALITY_HOLD_CREATED
+  timeClass: Future/Actual
+  target: product/order
+  effect: Blocks affected operation path.
+- type: QUALITY_HOLD_RELEASED
+  timeClass: Future
+  target: product/order
+  effect: Removes block.
+- type: COMMITMENT_PRIORITY_CHANGED
+  timeClass: Future
+  target: commitment
+  effect: Changes objective weight/priority.
+- type: COMMITMENT_DUE_DATE_CHANGED
+  timeClass: Future
+  target: commitment
+  effect: Changes hard/soft deadline.
+- type: MANPOWER_CAPACITY_CHANGED
+  timeClass: Future
+  target: skill/resource
+  effect: Changes skill capacity.
+- type: PLAN_RECALCULATED
+  timeClass: Derived
+  target: plan
+  effect: New plan version generated.
+- type: SCENARIO_CREATED
+  timeClass: Command
+  target: scenario
+  effect: Creates branch.
+- type: SCENARIO_CALCULATED
+  timeClass: Derived
+  target: scenario
+  effect: Scenario result stored.
+- type: DECISION_APPROVED
+  timeClass: Command
+  target: decision
+  effect: Authorizes alternative.
+- type: PLAN_COMMITTED
+  timeClass: Command
+  target: plan
+  effect: Publishes selected plan.
+- type: ACTUAL_OPERATION_CONFIRMED
+  timeClass: Actual
+  target: operation
+  effect: Immutable execution fact.
+- type: ACTUAL_MATERIAL_CONSUMED
+  timeClass: Actual
+  target: material/order
+  effect: Immutable consumption fact.
+- type: ACTUAL_COST_POSTED
+  timeClass: Actual
+  target: cost object
+  effect: Immutable financial fact.
+- type: LESSON_PUBLISHED
+  timeClass: Derived
+  target: lesson
+  effect: Makes lesson reusable.

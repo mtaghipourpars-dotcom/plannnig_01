@@ -1,0 +1,18 @@
+package: mapna-generator-architecture
+version: 1.0.0
+status: architecture-baseline
+primary_domain: dynamic-production-planning-and-resource-allocation
+system_of_record_boundaries:
+  sap_s4hana: SAP-owned master/transaction facts
+  platform: planning/scenario/decision/read-model facts
+  mes: shop-floor execution source where applicable
+daily_planning_quantum: 1 day
+default_horizon_days: 90
+mandatory_event_driven: true
+actuals_immutable_after_close: true
+scenario_branch_from_baseline: true
+sap_writeback: released-interfaces-only
+direct_sap_db_access: false
+validation_commands:
+- python scripts/validate_skill.py .
+- skills-ref validate .

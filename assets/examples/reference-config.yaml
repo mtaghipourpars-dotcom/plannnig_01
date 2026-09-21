@@ -1,0 +1,31 @@
+# Reference configuration — all values are examples/placeholders and must be approved before production use.
+planning:
+  quantum: DAY
+  horizon_days: 90
+  cutoff_local_time: "16:00"
+  same_day_event_types:
+    - MACHINE_BREAKDOWN
+    - ACTUAL_OPERATION_CONFIRMED
+  default_future_event_policy: NEXT_OPEN_DAY
+  stale_scenario_policy: REQUIRE_REBASE
+resources:
+  confidence_values: [HIGH, MEDIUM, LOW]
+  shortage_statuses: [OK, WARNING, SHORTAGE, CRISIS]
+optimization:
+  objectives:
+    - MIN_RESOURCE_INJECTION
+    - MIN_COMMITMENT_DELAY
+    - MAX_BUSINESS_VALUE
+  hard_constraints:
+    - NO_NEGATIVE_MATERIAL_BALANCE
+    - CAPACITY_NOT_EXCEEDED
+    - PRECEDENCE_MUST_HOLD
+    - CASH_LIMIT_NOT_EXCEEDED
+    - CRITICAL_COMMITMENTS_ON_TIME
+sap:
+  integration_mode: RELEASED_API_FIRST
+  direct_db_access: false
+  cloud_connector_required_for_btp_on_prem: true
+audit:
+  hash_algorithm: SHA-256
+  retention_days: 2555

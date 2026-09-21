@@ -1,0 +1,14 @@
+flowchart LR
+  U[Management / Planning Users] --> UI[MAPNA Dynamic Planning Web UI]
+  P[Production Planning / Engineering / Supply / Finance / Quality] --> UI
+  UI --> API[Planning Platform API]
+  API --> CORE[Dynamic Planning & Decision Engine]
+  CORE --> DB[(Operational PostgreSQL)]
+  CORE --> BUS[(Event Bus)]
+  CORE --> OPT[Constraint / Optimization Workers]
+  CORE --> WF[Approval Workflow]
+  BUS --> INT[Integration Gateway]
+  INT <--> SAP[SAP S/4HANA On-Premise]
+  INT <--> MES[MES / Shop-floor sources]
+  CORE --> OBS[Observability Platform]
+  CORE --> OBJ[(Object Storage)]
